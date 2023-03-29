@@ -16,24 +16,31 @@ function setupDocumentsRoute(app) {
     }
   });
 
-  app.get('/api/documents', async (req, res) => {
+
+  app.get('/api/documents/:id', async (req, res) => {
+    const { id } = req.params;
     try {
-      const results = await db.query('SELECT * FROM documents');
-      res.json(results);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      res.status(500).json({ error: 'Error fetching documents' });
+      const [rows] = await db.query('SELECT * FROM documents WHERE id = ?', [id]);
+      if (rows.length === 0) {
+        res.status(404).json({ error: 'Document not found' });
+      } else {
+        res.json(rows[0]);
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Error retrieving document' });
     }
   });
+
 
   app.put('/api/documents/:id', async (req, res) => {
     const { id } = req.params;
     const { draft_id, title, handler, modified } = req.body;
     try {
-      const existingDocument = await db.query('SELECT * FROM documents WHERE id = ?', [id]);
-      if (existingDocument.length === 0) {
-        res.status(404).json({ error: `Document with id ${id} not found` });
-        return;
+      const result = await db.query('UPDATE documents SET draft_id = ?, title = ?, handler = ? WHERE id = ?', [draft_id, title, handler, id]);
+      if (result.affectedRows === 0) {
+        res.status(404).json({ error: 'Document not found' });
+      } else {
+        res.status(200).json({ message: 'Document updated successfully' });
       }
       await db.query(
         'UPDATE documents SET draft_id = ?, title = ?, handler = ?, modified = ? WHERE id = ?',
@@ -46,21 +53,21 @@ function setupDocumentsRoute(app) {
     }
   });
 
+
   app.delete('/api/documents/:id', async (req, res) => {
     const { id } = req.params;
     try {
-      const existingDocument = await db.query('SELECT * FROM documents WHERE id = ?', [id]);
-      if (existingDocument.length === 0) {
-        res.status(404).json({ error: `Document with id ${id} not found` });
-        return;
+      const result = await db.query('DELETE FROM documents WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        res.status(404).json({ error: 'Document not found' });
+      } else {
+        res.status(200).json({ message: 'Document deleted successfully' });
       }
-      await db.query('DELETE FROM documents WHERE id = ?', [id]);
-      res.sendStatus(204);
-    } catch (error) {
-      console.error(`Error deleting document with id ${id}:`, error);
-      res.status(500).json({ error: `Error deleting document with id ${id}` });
+    } catch (err) {
+      res.status(500).json({ error: 'Error deleting document' });
     }
   });
+
 }
 
 module.exports = setupDocumentsRoute;
