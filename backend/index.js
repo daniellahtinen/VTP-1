@@ -1,11 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const plansApp = require('./plans');
-const setupDraftsRoute = require('./drafts');
 const setupDocumentsRoute = require('./documents');
-const setupTargetTimeframesRoute = require('./target_timeframes');
+const setupDraftsRoute = require('./drafts');
 const setupInspectionInformationRoute = require('./inspection_information');
-const setupSchedulingRoute = require('./scheduling'); // manually added (T. Anttila)
+const setupTargetTimeframesRoute = require('./target_timeframes');
+const setupSchedulingRoute = require('./scheduling');
 
 const app = express();
 
