@@ -4,7 +4,7 @@ const plansApp = require('./plans');
 const setupDraftsRoute = require('./drafts');
 const setupDocumentsRoute = require('./documents');
 const setupTargetTimeframesRoute = require('./targettimeframes');
-const setupInspectionsRoute = require('./inspections')
+const setupInspectionInformationRoute = require('./inspection_information');
 const setupSchedulingRoute = require('./scheduling'); // manually added (T. Anttila)
 
 const app = express();
@@ -25,6 +25,7 @@ setupDocumentsRoute(app); // Call the exported function from documents.js, passi
 setupTargetTimeframesRoute(app);
 setupInspectionsRoute(app);
 setupDraftsRoute(app);
+setupInspectionInformationRoute(app);
 setupSchedulingRoute(app); // manually added (T. Anttila)
 
 const port = process.env.PORT || 3000;
