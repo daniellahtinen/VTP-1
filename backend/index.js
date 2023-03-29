@@ -1,11 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const plansApp = require('./plans');
-const draftsApp = require('./drafts');
+const setupDraftsRoute = require('./drafts');
 const setupDocumentsRoute = require('./documents');
 const setupTargetTimeframesRoute = require('./targettimeframes');
 const setupInspectionsRoute = require('./inspections')
-const setupSchedulingRoute= require('./scheduling'); // manually added (T. Anttila)
+const setupSchedulingRoute = require('./scheduling'); // manually added (T. Anttila)
 
 const app = express();
 
@@ -20,11 +20,11 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 
 app.use('/plans', plansApp);
-app.use('/drafts', draftsApp);
 
 setupDocumentsRoute(app); // Call the exported function from documents.js, passing in the app instance
 setupTargetTimeframesRoute(app);
 setupInspectionsRoute(app);
+setupDraftsRoute(app);
 setupSchedulingRoute(app); // manually added (T. Anttila)
 
 const port = process.env.PORT || 3000;

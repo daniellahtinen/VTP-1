@@ -1,83 +1,65 @@
-const express = require('express');
+// drafts.js
+
 const db = require('./db');
 
-const router = express.Router();
-
-router.get('/', async (req, res) => {
-  try {
-    const results = await db.query('SELECT * FROM drafts');
-    res.send(results);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.get('/:id', async (req, res) => {
-  const id = req.params.id;
-  try {
-    const results = await db.query('SELECT * FROM drafts WHERE id = ?', [id]);
-    if (results.length > 0) {
-      res.send(results[0]);
-    } else {
-      res.status(404).send('Draft not found');
+function setupDraftsRoute(app) {
+  app.post('/api/drafts', async (req, res) => {
+    const { subject_id } = req.body;
+    try {
+      const result = await db.query('INSERT INTO drafts (subject_id) VALUES (?)', [subject_id]);
+      res.status(201).json({ id: result.insertId });
+    } catch (err) {
+      res.status(500).json({ error: 'Error creating draft' });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
+  });
 
-router.post('/', async (req, res) => {
-  const { title, body } = req.body;
-  try {
-    const result = await db.query('INSERT INTO drafts (title, body) VALUES (?, ?)', [title, body]);
-    const newDraft = {
-      id: result.insertId,
-      title,
-      body
-    };
-    res.send(newDraft);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
 
-router.put('/:id', async (req, res) => {
-  const id = req.params.id;
-  const { title, body } = req.body;
-  try {
-    const result = await db.query('UPDATE drafts SET title = ?, body = ? WHERE id = ?', [title, body, id]);
-    if (result.affectedRows > 0) {
-      const updatedDraft = {
-        id: parseInt(id),
-        title,
-        body
-      };
-      res.send(updatedDraft);
-    } else {
-      res.status(404).send('Draft not found');
+  app.get('/api/drafts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [rows] = await db.query('SELECT drafts.id, drafts.subject_id, inspection_information.* FROM drafts JOIN inspection_information ON drafts.id = inspection_information.draft_id WHERE drafts.id = ?', [id]);
+      if (rows.length === 0) {
+        res.status(404).json({ error: 'Draft not found' });
+      } else {
+        res.json(rows[0]);
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Error retrieving draft' });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
+  });
 
-router.delete('/:id', async (req, res) => {
-  const id = req.params.id;
-  try {
-    const result = await db.query('DELETE FROM drafts WHERE id = ?', [id]);
-    if (result.affectedRows > 0) {
-      res.send('Draft deleted');
-    } else {
-      res.status(404).send('Draft not found');
+
+  app.put('/api/drafts/:id', async (req, res) => {
+    const { id } = req.params;
+    const { subject_id } = req.body;
+    try {
+      const result = await db.query('UPDATE drafts SET subject_id = ? WHERE id = ?', [subject_id, id]);
+      if (result.affectedRows === 0) {
+        res.status(404).json({ error: 'Draft not found' });
+      } else {
+        res.status(200).json({ message: 'Draft updated successfully' });
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Error updating draft' });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Internal server error');
-  }
-});
+  });
 
-module.exports = router;
+
+  app.delete('/api/drafts/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await db.query('DELETE FROM drafts WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        res.status(404).json({ error: 'Draft not found' });
+      } else {
+        res.status(200).json({ message: 'Draft deleted successfully' });
+      }
+    } catch (err) {
+      res.status(500).json({ error: 'Error deleting draft' });
+    }
+  });
+
+
+}
+
+module.exports = setupDraftsRoute;
