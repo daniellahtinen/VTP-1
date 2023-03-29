@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const plansApp = require('./plans');
 const setupDocumentsRoute = require('./documents');
+const setupInspectionSubjectsRoute = require('./inspection_subjects');
 const setupDraftsRoute = require('./drafts');
 const setupInspectionInformationRoute = require('./inspection_information');
 const setupTargetTimeframesRoute = require('./target_timeframes');
@@ -21,11 +22,12 @@ app.use(bodyParser.json());
 
 app.use('/plans', plansApp);
 
-setupDocumentsRoute(app); // Call the exported function from documents.js, passing in the app instance
+setupDocumentsRoute(app);
+setupInspectionSubjectsRoute(app);
 setupDraftsRoute(app);
 setupInspectionInformationRoute(app);
 setupTargetTimeframesRoute(app);
-setupSchedulingRoute(app); // manually added (T. Anttila)
+setupSchedulingRoute(app);
 
 const port = process.env.PORT || 3000;
 
