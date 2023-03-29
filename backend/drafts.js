@@ -59,6 +59,39 @@ function setupDraftsRoute(app) {
     }
   });
 
+  app.get('/api/drafts/:id/full', async (req, res) => {
+    const { id } = req.params;
+    try {
+      // Fetch draft and its inspection information
+      const [draftRows] = await db.query('SELECT drafts.id, drafts.subject_id, inspection_information.* FROM drafts JOIN inspection_information ON drafts.id = inspection_information.draft_id WHERE drafts.id = ?', [id]);
+      if (draftRows.length === 0) {
+        res.status(404).json({ error: 'Draft not found' });
+        return;
+      }
+
+      // Fetch target timeframes
+      const [targetTimeframes] = await db.query('SELECT * FROM target_timeframes WHERE draft_id = ?', [id]);
+
+      // Fetch documents
+      const [documents] = await db.query('SELECT * FROM documents WHERE draft_id = ?', [id]);
+
+      // Fetch scheduling
+      const [scheduling] = await db.query('SELECT * FROM scheduling WHERE draft_id = ?', [id]);
+
+      // Combine data into a single response object
+      const draft = {
+        ...draftRows[0],
+        target_timeframes: targetTimeframes,
+        documents: documents,
+        scheduling: scheduling,
+      };
+
+      res.json(draft);
+    } catch (err) {
+      res.status(500).json({ error: 'Error retrieving full draft information' });
+    }
+  });
+
 
 }
 
