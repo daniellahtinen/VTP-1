@@ -36,7 +36,11 @@ function setupDocumentsRoute(app) {
     const { id } = req.params;
     const { draft_id, title, handler, modified } = req.body;
     try {
-      const result = await db.query('UPDATE documents SET draft_id = ?, title = ?, handler = ? WHERE id = ?', [draft_id, title, handler, id]);
+      const [result] = await db.query(
+        'UPDATE documents SET draft_id = ?, title = ?, handler = ?, modified = NOW() WHERE id = ?',
+        [draft_id, title, handler, id]
+      );
+
       if (result.affectedRows === 0) {
         res.status(404).json({ error: 'Document not found' });
       } else {
@@ -52,6 +56,7 @@ function setupDocumentsRoute(app) {
       res.status(500).json({ error: `Error updating document with id ${id}` });
     }
   });
+
 
 
   app.delete('/api/documents/:id', async (req, res) => {
