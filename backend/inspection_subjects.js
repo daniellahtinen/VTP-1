@@ -55,6 +55,17 @@ function setupInspectionSubjectsRoute(app) {
         }
     });
 
+
+    app.get('/api/inspection_subjects/:subject_id/drafts', async (req, res) => {
+        const { subject_id } = req.params;
+        try {
+            const [rows] = await db.query('SELECT drafts.id, inspection_information.issue FROM drafts JOIN inspection_information ON drafts.id = inspection_information.draft_id WHERE drafts.subject_id = ?', [subject_id]);
+            res.json(rows);
+        } catch (err) {
+            res.status(500).json({ error: 'Error retrieving drafts for inspection subject' });
+        }
+    });
+
 }
 
 module.exports = setupInspectionSubjectsRoute;
