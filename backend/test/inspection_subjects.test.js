@@ -11,19 +11,25 @@ const { expect } = chai;
 describe('Inspection Subjects API', () => {
     // Clean up the test database before and after each test
     beforeEach(async () => {
+        await db.query('DELETE FROM target_timeframes');
+        await db.query('DELETE FROM inspection_information');
+        await db.query('DELETE FROM drafts');
         await db.query('DELETE FROM inspection_subject');
     });
 
     afterEach(async () => {
+        await db.query('DELETE FROM target_timeframes');
+        await db.query('DELETE FROM inspection_information');
+        await db.query('DELETE FROM drafts');
         await db.query('DELETE FROM inspection_subject');
     });
+
 
     describe('POST /api/inspection_subjects', () => {
         it('should create a new inspection_subject', async () => {
             const res = await chai.request(app)
                 .post('/api/inspection_subjects')
                 .send({ name: 'Test Subject' });
-
             expect(res).to.have.status(201);
             expect(res.body).to.have.property('id');
         });
@@ -82,6 +88,27 @@ describe('Inspection Subjects API', () => {
             expect(res.body).to.have.property('error', 'Inspection_subject not found');
         });
     });
+
+    describe('GET /api/inspection_subjects/:subject_id/drafts', () => {
+        it('should retrieve all drafts for a given inspection subject', async () => {
+            const [sub] = await db.query('INSERT INTO inspection_subject (name) VALUES (?)', ['Subject 1']);
+            const [draft] = await db.query('INSERT INTO drafts (subject_id) VALUES (?)', [sub.insertId]);
+            await db.query('INSERT INTO inspection_information (draft_id, issue) VALUES (?, ?)', [draft.insertId, 'Issue 1']);
+            const res = await chai.request(app).get(`/api/inspection_subjects/${sub.insertId}/drafts`);
+            expect(res.status).to.equal(200);
+            expect(res.body).to.be.an('array');
+            expect(res.body[0].id).to.equal(draft.insertId);
+            expect(res.body[0].issue).to.equal('Issue 1');
+        });
+
+        it('should return an empty array if there are no drafts for a given inspection subject', async () => {
+            const res = await chai.request(app).get('/api/inspection_subjects/9999/drafts');
+            expect(res.status).to.equal(404);
+            expect(res.body).to.be.an('object');
+            expect(res.body.error).to.equal('No drafts found for inspection subject');
+        });
+    });
+
 });
 
 
