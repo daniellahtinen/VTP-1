@@ -112,115 +112,111 @@ describe('Target Timeframes API', () => {
     });
 });
 
-describe('PUT /api/targettimeframes/:id', () => {
+
+    describe('PUT /api/targettimeframes/:id', () => {
     // Create a target timeframe to update
-    let targetTimeframeId;
-    before(async () => {
-        const result = await db.query(
-            'INSERT INTO targettimeframes (target_id, planned_date, actual_date, comments, document_id) VALUES (?, ?, ?, ?, ?)',
-            [1, '2022-01-01', null, 'Test comment', null]
-        );
-        targetTimeframeId = result.insertId;
-    });
-
-    // Test updating an existing target timeframe
-    it('should update an existing target timeframe', async () => {
-        const res = await chai
-            .request(app)
-            .put(`/api/targettimeframes/${targetTimeframeId}`)
-            .send({
-                target_id: 1,
-                planned_date: '2022-01-02',
-                actual_date: '2022-01-01',
-                comments: 'Updated comment',
-                document_id: null,
-            });
-        expect(res).to.have.status(204);
-
-        const updatedTargetTimeframe = await db.query('SELECT * FROM targettimeframes WHERE id = ?', [
-            targetTimeframeId,
-        ]);
-        expect(updatedTargetTimeframe[0]).to.deep.include({
-            id: targetTimeframeId,
-            target_id: 1,
-            // planned_date: '2022-01-02',
-            // actual_date: '2022-01-01',
-            comments: 'Updated comment',
-            document_id: null,
+        let targetTimeframeId;
+        before(async () => {
+            const result = await db.query(
+                'INSERT INTO targettimeframes (target_id, planned_date, actual_date, comments, document_id) VALUES (?, ?, ?, ?, ?)',
+                [1, '2022-01-01', null, 'Test comment', null]
+            );
+            targetTimeframeId = result.insertId;
         });
-        expect(new Date(updatedTargetTimeframe[0].planned_date).toISOString().substr(0, 10)).to.equal('2022-01-02');
-        expect(new Date(updatedTargetTimeframe[0].actual_date).toISOString().substr(0, 10)).to.equal('2022-01-01');
-    });
 
-    // Test updating a non-existent target timeframe
-    it('should return a 404 error if the target timeframe does not exist', async () => {
-        const res = await chai
-            .request(app)
-            .put('/api/targettimeframes/999')
-            .send({
-                target_id: 1,
-                planned_date: '2022-01-02',
-                actual_date: '2022-01-01',
-                comments: 'Updated comment',
-                document_id: null,
-            });
-        expect(res).to.have.status(404);
-        expect(res.body).to.deep.equal({ error: 'Target timeframe with id 999 not found' });
-    });
 
-    // Clean up the test data
-    after(async () => {
-        await db.query('DELETE FROM targettimeframes WHERE id = ?', [targetTimeframeId]);
-    });
-});
 
-describe('Target Timeframes API - Get by target_id', () => {
-    before(async () => {
-        // create a target timeframe to use for testing
-        const results = await db.query(
+        // Test updating an existing target timeframe
+        it('should update an existing target timeframe', async () => {
+            const targetTimeframe = { target_id: 1, planned_date: '2022-01-01', actual_date: null, comments: 'Test comment', document_id: null };
+            const insertResult = await db.query(
             'INSERT INTO targettimeframes (target_id, planned_date, actual_date, comments, document_id) VALUES (?, ?, ?, ?, ?)',
-            [1, '2023-04-01', '2023-04-05', 'Test comment', 1]
-        );
+            [targetTimeframe.target_id, targetTimeframe.planned_date, targetTimeframe.actual_date, targetTimeframe.comments, targetTimeframe.document_id]
+            );
+            const updatedTargetTimeframe = { planned_date: '2022-02-01', actual_date: '2022-01-15', comments: 'Updated comment', document_id: 1 };
+            const res = await request(app)
+            .put(`/api/targettimeframes/${insertResult.insertId}`)
+            .send(updatedTargetTimeframe);
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toHaveProperty('success', true);
+            expect(res.body).toHaveProperty('message', 'Target timeframe updated successfully');
+            const selectResult = await db.query('SELECT * FROM targettimeframes WHERE id = ?', [insertResult.insertId]);
+            const updatedRecord = selectResult[0];
+            expect(updatedRecord).toMatchObject({ target_id: targetTimeframe.target_id, ...updatedTargetTimeframe });
+        });
+
+        // Test updating a non-existent target timeframe
+        it('should return a 404 error when updating a non-existent target timeframe', async () => {
+            const res = await request(app)
+            .put('/api/targettimeframes/999')
+            .send({ planned_date: '2022-02-01', actual_date: '2022-01-15', comments: 'Updated comment', document_id: 1 });
+            expect(res.statusCode).toEqual(404);
+            expect(res.body).toHaveProperty('success', false);
+            expect(res.body).toHaveProperty('message', 'Target timeframe not found');
+        });
+
+        // Test updating a target timeframe with invalid data
+        it('should return a 400 error when updating a target timeframe with invalid data', async () => {
+            const targetTimeframe = { target_id: 1, planned_date: '2022-01-01', actual_date: null, comments: 'Test comment', document_id: null };
+            const insertResult = await db.query(
+            'INSERT INTO targettimeframes (target_id, planned_date, actual_date, comments, document_id) VALUES (?, ?, ?, ?, ?)',
+            [targetTimeframe.target_id, targetTimeframe.planned_date, targetTimeframe.actual_date, targetTimeframe.comments, targetTimeframe.document_id]
+         );
+            const res = await request(app)
+            .put(`/api/targettimeframes/${insertResult.insertId}`)
+            .send({ planned_date: 'invalid date' });
+            expect(res.statusCode).toEqual(400);
+            expect(res.body).toHaveProperty('success', false);
+            expect(res.body).toHaveProperty('message', 'Invalid data in request body');
+        }); 
+
+        
+        // Clean up the test data
+        after(async () => {
+         await db.query('DELETE FROM targettimeframes WHERE id = ?', [targetTimeframeId]);
+        });
     });
 
-    after(async () => {
-        // delete the target timeframe used for testing
-        await db.query('DELETE FROM targettimeframes WHERE target_id = ?', [1]);
-    });
 
-    it('should return all target timeframes with the given target_id', (done) => {
-        chai.request(app)
-            .get('/api/targettimeframes/target/1')
-            .end((err, res) => {
-                res.should.have.status(200);
-                res.body.should.be.a('array');
-                res.body.should.have.lengthOf(1);
-                done();
+    describe('Target Timeframes API - Get by target_id', () => {
+        beforeAll(async () => {
+            // create a target timeframe to use for testing
+            const results = await db.query(
+                'INSERT INTO targettimeframes (target_id, planned_date, actual_date, comments, document_id) VALUES (?, ?, ?, ?, ?)',
+                [1, '2023-04-01', '2023-04-05', 'Test comment', 1]
+            );
+        });
+    
+        afterAll(async () => {
+            // delete the target timeframe used for testing
+            await db.query('DELETE FROM targettimeframes WHERE target_id = ?', [1]);
+        });
+    
+        it('should return all target timeframes with the given target_id', async () => {
+            const res = await request(app).get('/api/targettimeframes/target/1');
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toBeInstanceOf(Array);
+            expect(res.body).toHaveLength(1);
+        });
+    
+        it('should return an empty array if no target timeframes are found with the given target_id', async () => {
+            const res = await request(app).get('/api/targettimeframes/target/2');
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toBeInstanceOf(Array);
+            expect(res.body).toHaveLength(0);
+        });
+    
+        it('should return a 500 status if an error occurs while fetching target timeframes', async () => {
+            // override the db.query method to simulate an error
+            jest.spyOn(db, 'query').mockImplementation(() => {
+                throw new Error('Test error');
             });
+    
+            const res = await request(app).get('/api/targettimeframes/target/1');
+            expect(res.statusCode).toEqual(500);
+            expect(res.body).toHaveProperty('error');
+            
+            // restore the original db.query method
+            jest.spyOn(db, 'query').mockRestore();
+        });
     });
-
-    it('should return an empty array if no target timeframes are found with the given target_id', (done) => {
-        chai.request(app)
-            .get('/api/targettimeframes/target/2')
-            .end((err, res) => {
-                res.should.have.status(200);
-                res.body.should.be.a('array');
-                res.body.should.have.lengthOf(0);
-                done();
-            });
-    });
-
-    // it('should return a 500 status if an error occurs while fetching target timeframes', (done) => {
-    //     // override the db.query method to simulate an error
-    //     db.query = () => {
-    //         throw new Error('Test error');
-    //     };
-    //     chai.request(app)
-    //         .get('/api/targettimeframes/target/1')
-    //         .end((err, res) => {
-    //             res.should.have.status(500);
-    //             res.body.should.have.property('error');
-    //             done();
-    //         });
-    // });
-});
